@@ -203,9 +203,9 @@ export default class BunnyStream {
     private _accessKey: string
   ) {}
 
-  a() {
-    this.library(0).video("").upload;
-  }
+  // a() {
+  //   this.library(0).video("").upload;
+  // }
 
   private _endpoint = "https://video.bunnycdn.com";
 

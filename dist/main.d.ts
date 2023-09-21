@@ -188,7 +188,6 @@ export default class BunnyStream {
      * The Stream API uses its own authentication keys. Authenticating via the bunny.net account API key will not work.
      */
     _accessKey: string);
-    a(): void;
     private _endpoint;
     library: (libraryId: number) => {
         statistics: (dateFrom?: Date | number, dateTo?: Date | number, hourly?: boolean) => Promise<Statistics>;
@@ -204,13 +203,11 @@ export default class BunnyStream {
             info: () => Promise<Video>;
             update: (body: EditableVideo) => Promise<Status>;
             delete: () => Promise<Status>;
-            upload: ({ video, title, collectionId, thumbnailTime, videoMimeTypeOverride, expirationTimeOverride, createBody, uploadBody, onCreatedVideo, }: UploadParams) => Promise<void>;
+            upload: ({ video, title, collectionId, thumbnailTime, videoMimeTypeOverride, expirationTimeOverride, createBody, uploadBody, onCreatedVideo, }: UploadParams) => Promise<never>;
             heatmap: () => Promise<Heatmap>;
             statistics: (dateFrom?: Date | number, dateTo?: Date | number, hourly?: boolean) => Promise<Statistics>;
             reencode: () => Promise<Video>;
-            setThumbnail: (thumbnailUrl: string, body?: {
-                [key: string]: any;
-            }) => Promise<Status>;
+            setThumbnail: (thumbnailUrl: string) => Promise<Status>;
             caption: (srclang: string) => {
                 add: (label?: string, captionsFile?: string, body?: {
                     [key: string]: any;

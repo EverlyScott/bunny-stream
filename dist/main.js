@@ -13,8 +13,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const axios_1 = __importDefault(require("axios"));
-const promises_1 = __importDefault(require("fs/promises"));
-const crypto_1 = __importDefault(require("crypto"));
 class BunnyStream {
     constructor(
     /**
@@ -24,6 +22,9 @@ class BunnyStream {
      */
     _accessKey) {
         this._accessKey = _accessKey;
+        // a() {
+        //   this.library(0).video("").upload;
+        // }
         this._endpoint = "https://video.bunnycdn.com";
         this.library = (libraryId) => {
             return {
@@ -203,33 +204,41 @@ class BunnyStream {
                             }
                         }),
                         upload: ({ video, title, collectionId, thumbnailTime, videoMimeTypeOverride, expirationTimeOverride, createBody, uploadBody, onCreatedVideo, }) => __awaiter(this, void 0, void 0, function* () {
-                            const createRes = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/videos`, Object.assign({ title,
-                                collectionId,
-                                thumbnailTime }, createBody), {
-                                headers: {
-                                    "Content-Type": "application/json",
-                                    AccessKey: this._accessKey,
-                                },
-                            });
-                            switch (createRes.status) {
-                                case 200: {
-                                    onCreatedVideo === null || onCreatedVideo === void 0 ? void 0 : onCreatedVideo(createRes.data);
-                                    break;
-                                }
-                                case 401: {
-                                    throw new Error("While creating video: The request authorization failed");
-                                }
-                                case 500: {
-                                    throw new Error("While creating video: Internal Server Error");
-                                }
-                            }
-                            const { fileTypeFromBuffer } = yield import("file-type");
-                            const videoFile = yield promises_1.default.readFile(video);
-                            const videoMimeType = videoMimeTypeOverride !== null && videoMimeTypeOverride !== void 0 ? videoMimeTypeOverride : (yield fileTypeFromBuffer(videoFile));
-                            const expirationTime = expirationTimeOverride !== null && expirationTimeOverride !== void 0 ? expirationTimeOverride : 3600000; // 1 day
-                            const hash = crypto_1.default.createHash("sha256");
-                            hash.update(libraryId + this._accessKey + expirationTime + videoId);
-                            // if this ever does get implemented, this function will create the video (https://docs.bunny.net/reference/video_createvideo), then upload the video (https://docs.bunny.net/reference/video_uploadvideo)
+                            throw new Error("Not implemented");
+                            // const createRes = await axios.post<Video>(
+                            //   `${this._endpoint}/library/${libraryId}/videos`,
+                            //   {
+                            //     title,
+                            //     collectionId,
+                            //     thumbnailTime,
+                            //     ...createBody,
+                            //   },
+                            //   {
+                            //     headers: {
+                            //       "Content-Type": "application/json",
+                            //       AccessKey: this._accessKey,
+                            //     },
+                            //   }
+                            // );
+                            // switch (createRes.status) {
+                            //   case 200: {
+                            //     onCreatedVideo?.(createRes.data);
+                            //     break;
+                            //   }
+                            //   case 401: {
+                            //     throw new Error("While creating video: The request authorization failed");
+                            //   }
+                            //   case 500: {
+                            //     throw new Error("While creating video: Internal Server Error");
+                            //   }
+                            // }
+                            // const { fileTypeFromBuffer } = await import("file-type");
+                            // const videoFile = await fs.readFile(video);
+                            // const videoMimeType = videoMimeTypeOverride ?? (await fileTypeFromBuffer(videoFile));
+                            // const expirationTime = expirationTimeOverride ?? 3600000; // 1 day
+                            // const hash = crypto.createHash("sha256");
+                            // hash.update(libraryId + this._accessKey + expirationTime + videoId);
+                            // // if this ever does get implemented, this function will create the video (https://docs.bunny.net/reference/video_createvideo), then upload the video (https://docs.bunny.net/reference/video_uploadvideo)
                         }),
                         heatmap: () => __awaiter(this, void 0, void 0, function* () {
                             const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/videos/${videoId}/heatmap`, {
@@ -312,10 +321,9 @@ class BunnyStream {
                                 }
                             }
                         }),
-                        setThumbnail: (thumbnailUrl, body) => __awaiter(this, void 0, void 0, function* () {
-                            const res = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/videos/${videoId}/thumbnail`, Object.assign({ thumbnailUrl }, body), {
+                        setThumbnail: (thumbnailUrl) => __awaiter(this, void 0, void 0, function* () {
+                            const res = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/videos/${videoId}/thumbnail?thumbnailUrl=${encodeURIComponent(thumbnailUrl)}`, {
                                 headers: {
-                                    "Content-Type": "application/json",
                                     AccessKey: this._accessKey,
                                 },
                             });
@@ -524,9 +532,6 @@ class BunnyStream {
                 },
             };
         };
-    }
-    a() {
-        this.library(0).video("").upload;
     }
 }
 exports.default = BunnyStream;
