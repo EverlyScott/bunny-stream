@@ -266,7 +266,7 @@ export default class BunnyStream {
           search?: string,
           collection?: string,
           /** @default "date" */
-          orderBy?: "date" | (string & {})
+          orderBy?: "date" | "title" | (string & {})
         ) => {
           const res = await axios.get<PagedList<Video>>(
             `${this._endpoint}/library/${libraryId}/videos${page && `?page=${encodeURIComponent(page)}`}${
