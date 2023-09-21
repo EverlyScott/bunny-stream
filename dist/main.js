@@ -75,7 +75,7 @@ class BunnyStream {
                     itemsPerPage, search, collection, 
                     /** @default "date" */
                     orderBy) => __awaiter(this, void 0, void 0, function* () {
-                        const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/videos?page=${encodeURIComponent(page)}&itemsPerPage=${encodeURIComponent(itemsPerPage)}&search=${encodeURIComponent(search)}&collection=${encodeURIComponent(collection)}&orderBy=${encodeURIComponent(orderBy)}`, {
+                        const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/videos${page && `?page=${encodeURIComponent(page)}`}${itemsPerPage && `&itemsPerPage=${encodeURIComponent(itemsPerPage)}&search=${encodeURIComponent(search)}`}${collection && `&collection=${encodeURIComponent(collection)}`}${orderBy && `&orderBy=${encodeURIComponent(orderBy)}`}`, {
                             headers: {
                                 AccessKey: this._accessKey,
                             },

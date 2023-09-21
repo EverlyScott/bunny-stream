@@ -192,7 +192,7 @@ export default class BunnyStream {
     library: (libraryId: number) => {
         statistics: (dateFrom?: Date | number, dateTo?: Date | number, hourly?: boolean) => Promise<Statistics>;
         videos: {
-            list: (page: number, itemsPerPage: number, search: string, collection: string, orderBy: "date" | (string & {})) => Promise<PagedList<Video>>;
+            list: (page?: number, itemsPerPage?: number, search?: string, collection?: string, orderBy?: "date" | "title" | (string & {})) => Promise<PagedList<Video>>;
             fetch: (url: string, headers?: {
                 [key: string]: string;
             }, collectionId?: string, thumbnailTime?: number, body?: {
