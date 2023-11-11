@@ -269,11 +269,13 @@ export default class BunnyStream {
           orderBy?: "date" | "title" | (string & {})
         ) => {
           const res = await axios.get<PagedList<Video>>(
-            `${this._endpoint}/library/${libraryId}/videos${page !== undefined && `?page=${encodeURIComponent(page)}`}${
-              collection !== undefined && `&collection=${encodeURIComponent(collection)}`
-            }${itemsPerPage !== undefined && `&itemsPerPage=${encodeURIComponent(itemsPerPage)}`}${
-              search !== undefined && `&search=${encodeURIComponent(search)}`
-            }${orderBy !== undefined && `&orderBy=${encodeURIComponent(orderBy)}`}`,
+            `${this._endpoint}/library/${libraryId}/videos${
+              page !== undefined ? `?page=${encodeURIComponent(page)}` : ""
+            }${collection !== undefined ? `&collection=${encodeURIComponent(collection)}` : ""}${
+              itemsPerPage !== undefined ? `&itemsPerPage=${encodeURIComponent(itemsPerPage)}` : ""
+            }${search !== undefined ? `&search=${encodeURIComponent(search)}` : ""}${
+              orderBy !== undefined ? `&orderBy=${encodeURIComponent(orderBy)}` : ""
+            }`,
             {
               headers: {
                 AccessKey: this._accessKey,
