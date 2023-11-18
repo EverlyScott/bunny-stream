@@ -193,6 +193,83 @@ export interface UploadParams {
   onCreatedVideo?: (data: Video) => any;
 }
 
+export type HTTPMethod = "GET" | "HEAD" | "POST" | "PUT" | "DELETE" | "CONNECT" | "OPTIONS" | "TRACE" | "PATCH";
+
+export type HTTPMethodsWithBody = "POST" | "PUT" | "PATCH";
+
+export interface RequestQuery {
+  [key: string]: any;
+}
+
+export type HTTPErrorCodes =
+  | 100
+  | 101
+  | 102
+  | 103
+  | 200
+  | 201
+  | 202
+  | 203
+  | 204
+  | 205
+  | 206
+  | 207
+  | 208
+  | 226
+  | 300
+  | 301
+  | 302
+  | 303
+  | 304
+  | 305
+  | 306
+  | 307
+  | 308
+  | 400
+  | 401
+  | 402
+  | 403
+  | 404
+  | 405
+  | 406
+  | 407
+  | 408
+  | 409
+  | 410
+  | 411
+  | 412
+  | 413
+  | 414
+  | 415
+  | 416
+  | 147
+  | 418
+  | 421
+  | 422
+  | 423
+  | 424
+  | 425
+  | 426
+  | 428
+  | 429
+  | 431
+  | 451
+  | 500
+  | 501
+  | 502
+  | 503
+  | 504
+  | 505
+  | 506
+  | 507
+  | 508
+  | 510
+  | 511;
+
+export type HTTPErrorMessages = {
+  [K in HTTPErrorCodes]?: string;
+};
+
 export default class BunnyStream {
   constructor(
     /**
@@ -208,6 +285,34 @@ export default class BunnyStream {
   // }
 
   private _endpoint = "https://video.bunnycdn.com";
+
+  makeRequest = async <R = any, B = any, M extends HTTPMethod = HTTPMethod>(
+    method: M,
+    path: string,
+    query?: RequestQuery,
+    body?: M extends HTTPMethodsWithBody ? B : undefined,
+    errorMessages?: HTTPErrorMessages,
+    config?: axios.AxiosRequestConfig<B>
+  ) => {
+    const res = await axios<R>(`${this._endpoint}${path}`, {
+      headers: {
+        AccessKey: this._accessKey,
+      },
+      method,
+      params: query,
+      data: body,
+      ...config,
+    });
+
+    if (res.status >= 200 && res.status < 300) {
+      if ((res.data as any).success === false) {
+        throw new Error((res.data as any).message ?? "Unknown Error Occurred");
+      }
+      return res.data;
+    } else {
+      throw new Error(errorMessages[res.status] ?? res.statusText);
+    }
+  };
 
   library = (libraryId: number) => {
     return {
@@ -231,31 +336,27 @@ export default class BunnyStream {
          */
         dateTo?: Date | number,
         /** If true, the statistics data will be returned in hourly groupping */
-        hourly?: boolean
+        hourly?: boolean,
+        /** Axios config */
+        config?: axios.AxiosRequestConfig<Statistics>
       ) => {
         const dateFromEpoch = typeof dateFrom === "number" ? dateFrom : dateFrom.getDate() / 1000;
         const dateToEpoch = typeof dateTo === "number" ? dateTo : dateTo.getDate() / 1000;
 
-        const res = await axios.get<Statistics>(
-          `${this._endpoint}/library/${libraryId}/statistics?dateFrom=${encodeURIComponent(
-            dateFromEpoch
-          )}&dateTo=${encodeURIComponent(dateToEpoch)}&hourly=${encodeURIComponent(hourly)}`
+        return await this.makeRequest<"GET", Statistics>(
+          "GET",
+          `/library/${libraryId}/statistics`,
+          {
+            dateFrom: dateFromEpoch,
+            dateTo: dateToEpoch,
+            hourly,
+          },
+          undefined,
+          {
+            404: "The requested video was not found",
+          },
+          config
         );
-
-        switch (res.status) {
-          case 200: {
-            return res.data;
-          }
-          case 401: {
-            throw new Error("The request authorization failed");
-          }
-          case 404: {
-            throw new Error("The requested video was not found");
-          }
-          case 500: {
-            throw new Error("Internal Server Error");
-          }
-        }
       },
       videos: {
         list: async (
@@ -266,34 +367,24 @@ export default class BunnyStream {
           search?: string,
           collection?: string,
           /** @default "date" */
-          orderBy?: "date" | "title" | (string & {})
+          orderBy?: "date" | "title" | (string & {}),
+          /** Axios config */
+          config?: axios.AxiosRequestConfig<PagedList<Video>>
         ) => {
-          const res = await axios.get<PagedList<Video>>(
-            `${this._endpoint}/library/${libraryId}/videos${
-              page !== undefined ? `?page=${encodeURIComponent(page)}` : ""
-            }${collection !== undefined ? `&collection=${encodeURIComponent(collection)}` : ""}${
-              itemsPerPage !== undefined ? `&itemsPerPage=${encodeURIComponent(itemsPerPage)}` : ""
-            }${search !== undefined ? `&search=${encodeURIComponent(search)}` : ""}${
-              orderBy !== undefined ? `&orderBy=${encodeURIComponent(orderBy)}` : ""
-            }`,
+          return await this.makeRequest<PagedList<Video>>(
+            "GET",
+            `/library/${libraryId}/videos`,
             {
-              headers: {
-                AccessKey: this._accessKey,
-              },
-            }
+              page,
+              collection,
+              itemsPerPage,
+              search,
+              orderBy,
+            },
+            undefined,
+            {},
+            config
           );
-
-          switch (res.status) {
-            case 200: {
-              return res.data;
-            }
-            case 401: {
-              throw new Error("The request authorization failed");
-            }
-            case 500: {
-              throw new Error("Internal Server Error");
-            }
-          }
         },
         fetch: async (
           /** The URL where the video will be fetched */
@@ -307,120 +398,77 @@ export default class BunnyStream {
           thumbnailTime?: number,
           body?: {
             [key: string]: any;
-          }
+          },
+          /** Axios config */
+          config?: axios.AxiosRequestConfig<Statistics>
         ) => {
-          const res = await axios.post<Status>(
-            `${this._endpoint}/library/${libraryId}/videos/fetch?collectionId=${encodeURIComponent(
-              collectionId
-            )}&thumbnailTime=${encodeURIComponent(thumbnailTime)}`,
+          return await this.makeRequest<Status>(
+            "POST",
+            `/library/${libraryId}/videos/fetch`,
+            {
+              collectionId,
+              thumbnailTime,
+            },
             {
               url,
               headers,
               ...body,
             },
             {
-              headers: {
-                "Content-Type": "application/json",
-                AccessKey: this._accessKey,
-              },
-            }
+              400: "Failed fetching the video",
+              404: "The requested video was not found",
+            },
+            config
           );
-
-          switch (res.status) {
-            case 200: {
-              return res.data;
-            }
-            case 400: {
-              throw new Error("Failed fetching the video");
-            }
-            case 401: {
-              throw new Error("The request authorization failed");
-            }
-            case 404: {
-              throw new Error("The requested video was not found");
-            }
-            case 500: {
-              throw new Error("Internal Server Error");
-            }
-          }
         },
       },
       video: (videoId: string) => {
         return {
-          info: async () => {
-            const res = await axios.get<Video>(`${this._endpoint}/library/${libraryId}/videos/${videoId}`, {
-              headers: {
-                AccessKey: this._accessKey,
+          info: async (
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
+          ) => {
+            return await this.makeRequest<Video>(
+              "GET",
+              `/library/${libraryId}/videos/${videoId}`,
+              {},
+              undefined,
+              {
+                404: "The requested video was not found",
               },
-            });
-
-            switch (res.status) {
-              case 200: {
-                return res.data;
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested video was not found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
+              config
+            );
           },
-          update: async (body: EditableVideo) => {
-            const res = await axios.post<Status>(`${this._endpoint}/library/${libraryId}/videos/${videoId}`, body, {
-              headers: {
-                "Content-Type": "application/json",
-                AccessKey: this._accessKey,
+          update: async (
+            body: EditableVideo,
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
+          ) => {
+            return await this.makeRequest<Status>(
+              "POST",
+              `/library/${libraryId}/videos/${videoId}`,
+              {},
+              body,
+              {
+                404: "The requested video was not found",
               },
-            });
-
-            switch (res.status) {
-              case 200: {
-                if (res.data.success) {
-                  return res.data;
-                } else {
-                  throw new Error(res.data.message ?? "Unknown Error Occurred");
-                }
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested video was not found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
+              config
+            );
           },
-          delete: async () => {
-            const res = await axios.delete<Status>(`${this._endpoint}/library/${libraryId}/videos/${videoId}`, {
-              headers: {
-                AccessKey: this._accessKey,
+          delete: async (
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
+          ) => {
+            return await this.makeRequest<Status>(
+              "DELETE",
+              `/library/${libraryId}/videos/${videoId}`,
+              {},
+              undefined,
+              {
+                404: "The requested video was not found",
               },
-            });
-
-            switch (res.status) {
-              case 200: {
-                if (res.data.success) {
-                  return res.data;
-                } else {
-                  throw new Error(res.data.message ?? "Unknown Error Occurred");
-                }
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested video was not found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
+              config
+            );
           },
           upload: async ({
             video,
@@ -473,27 +521,20 @@ export default class BunnyStream {
 
             // // if this ever does get implemented, this function will create the video (https://docs.bunny.net/reference/video_createvideo), then upload the video (https://docs.bunny.net/reference/video_uploadvideo)
           },
-          heatmap: async () => {
-            const res = await axios.get<Heatmap>(`${this._endpoint}/library/${libraryId}/videos/${videoId}/heatmap`, {
-              headers: {
-                AccessKey: this._accessKey,
+          heatmap: async (
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
+          ) => {
+            return await this.makeRequest<Heatmap>(
+              "GET",
+              `/library/${libraryId}/videos/${videoId}/heatmap`,
+              {},
+              undefined,
+              {
+                404: "The requested video was not found",
               },
-            });
-
-            switch (res.status) {
-              case 200: {
-                return res.data;
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested video was not found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
+              config
+            );
           },
           statistics: async (
             /**
@@ -515,82 +556,61 @@ export default class BunnyStream {
              */
             dateTo?: Date | number,
             /** If true, the statistics data will be returned in hourly groupping */
-            hourly?: boolean
+            hourly?: boolean,
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
           ) => {
             const dateFromEpoch = typeof dateFrom === "number" ? dateFrom : dateFrom.getDate() / 1000;
             const dateToEpoch = typeof dateTo === "number" ? dateTo : dateTo.getDate() / 1000;
 
-            const res = await axios.get<Statistics>(
-              `${this._endpoint}/library/${libraryId}/statistics?dateFrom=${encodeURIComponent(
-                dateFromEpoch
-              )}&dateTo=${encodeURIComponent(dateToEpoch)}&hourly=${encodeURIComponent(
-                hourly
-              )}&videoGuid=${encodeURIComponent(videoId)}`
-            );
-
-            switch (res.status) {
-              case 200: {
-                return res.data;
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested video was not found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
-          },
-          reencode: async () => {
-            const res = await axios.post<Video>(`${this._endpoint}/library/${libraryId}/videos/${videoId}/reencode`, {
-              headers: {
-                AccessKey: this._accessKey,
-              },
-            });
-
-            switch (res.status) {
-              case 200: {
-                return res.data;
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested video was not found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
-          },
-          setThumbnail: async (thumbnailUrl: string) => {
-            const res = await axios.post<Status>(
-              `${this._endpoint}/library/${libraryId}/videos/${videoId}/thumbnail?thumbnailUrl=${encodeURIComponent(
-                thumbnailUrl
-              )}`,
+            return await this.makeRequest<Statistics>(
+              "GET",
+              `/library/${libraryId}/statistics`,
               {
-                headers: {
-                  AccessKey: this._accessKey,
-                },
-              }
+                dateFrom: dateFromEpoch,
+                dateTo: dateToEpoch,
+                hourly,
+                videoGuid: videoId,
+              },
+              undefined,
+              {
+                404: "The requested video was not found",
+              },
+              config
             );
-
-            switch (res.status) {
-              case 200: {
-                return res.data;
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested video could not be found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
+          },
+          reencode: async (
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
+          ) => {
+            return this.makeRequest<Video>(
+              "POST",
+              `/library/${libraryId}/videos/${videoId}/reencode`,
+              {},
+              {},
+              {
+                404: "The requested video was not found",
+              },
+              config
+            );
+          },
+          setThumbnail: async (
+            thumbnailUrl: string,
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
+          ) => {
+            return await this.makeRequest<Status>(
+              "POST",
+              `/library/${libraryId}/videos/${videoId}/thumbnail`,
+              {
+                thumbnailUrl,
+              },
+              {},
+              {
+                404: "The requested video could not be found",
+              },
+              config
+            );
           },
           caption: (srclang: string) => {
             return {
@@ -601,64 +621,42 @@ export default class BunnyStream {
                 captionsFile?: string,
                 body?: {
                   [key: string]: any;
-                }
+                },
+                /** Axios config */
+                config?: axios.AxiosRequestConfig<Statistics>
               ) => {
-                const res = await axios.post<Status>(
-                  `${this._endpoint}/library/${libraryId}/videos/${videoId}/captions/${srclang}`,
-                  { srclang, label, captionsFile, ...body },
+                return await this.makeRequest<Status>(
+                  "POST",
+                  `/library/${libraryId}/videos/${videoId}/captions/${srclang}`,
+                  {},
                   {
-                    headers: {
-                      "Content-Type": "application/json",
-                      AccessKey: this._accessKey,
-                    },
-                  }
+                    srclang,
+                    label,
+                    captionsFile,
+                    ...body,
+                  },
+                  {
+                    400: "Failed uploading the captions",
+                    404: "The requested video was not found",
+                  },
+                  config
                 );
-
-                switch (res.status) {
-                  case 200: {
-                    return res.data;
-                  }
-                  case 400: {
-                    throw new Error("Failed uploading the captions");
-                  }
-                  case 401: {
-                    throw new Error("The request authorization failed");
-                  }
-                  case 404: {
-                    throw new Error("The requested video was not found");
-                  }
-                  case 500: {
-                    throw new Error("Internal Server Error");
-                  }
-                }
               },
-              delete: async () => {
-                const res = await axios.delete<Status>(
-                  `${this._endpoint}/library/${libraryId}/videos/${videoId}/captions/${srclang}`,
+              delete: async (
+                /** Axios config */
+                config?: axios.AxiosRequestConfig<Statistics>
+              ) => {
+                return await this.makeRequest<Status>(
+                  "DELETE",
+                  `/library/${libraryId}/videos/${videoId}/captions/${srclang}`,
+                  {},
+                  undefined,
                   {
-                    headers: {
-                      AccessKey: this._accessKey,
-                    },
-                  }
+                    400: "Failed deleting the captions",
+                    404: "The requested video or captions were not found",
+                  },
+                  config
                 );
-
-                switch (res.status) {
-                  case 200: {
-                    return res.data;
-                  }
-                  case 400: {
-                    throw new Error("Failed deleting the captions");
-                  }
-                  case 401: {
-                    throw new Error("The request authorization failed");
-                  }
-                  case 404: {
-                    throw new Error("The requested video or captions were not found");
-                  }
-                  case 500: {
-                    throw new Error("Internal Server Error");
-                  }
-                }
               },
             };
           },
@@ -672,149 +670,87 @@ export default class BunnyStream {
           itemsPerPage?: number,
           search?: string,
           /** @default "date" */
-          orderBy?: "date" | (string & {})
+          orderBy?: "date" | (string & {}),
+          /** Axios config */
+          config?: axios.AxiosRequestConfig<Statistics>
         ) => {
-          const res = await axios.get<PagedList<Collection>>(
-            `${this._endpoint}/library/${libraryId}/collections?page=${encodeURIComponent(
-              page
-            )}&itemsPerPage=${encodeURIComponent(itemsPerPage)}&search=${encodeURIComponent(
-              search
-            )}&orderBy=${encodeURIComponent(orderBy)}`,
+          return await this.makeRequest<PagedList<Collection>>(
+            "GET",
+            `/library/${libraryId}/collections`,
             {
-              headers: {
-                AccessKey: this._accessKey,
-              },
-            }
+              page,
+              itemsPerPage,
+              search,
+              orderBy,
+            },
+            undefined,
+            {},
+            config
           );
-
-          switch (res.status) {
-            case 200: {
-              return res.data;
-            }
-            case 401: {
-              throw new Error("The request authorization failed");
-            }
-            case 500: {
-              throw new Error("Internal Server Error");
-            }
-          }
         },
         create: async (
           /** The name of the collection */
-          name: string
+          name: string,
+          /** Axios config */
+          config?: axios.AxiosRequestConfig<Statistics>
         ) => {
-          const res = await axios.post<Collection>(
-            `${this._endpoint}/library/${libraryId}/collections`,
-            {
-              name,
-            },
-            {
-              headers: {
-                "Content-Type": "application/json",
-                AccessKey: this._accessKey,
-              },
-            }
+          return await this.makeRequest<Collection>(
+            "POST",
+            `/library/${libraryId}/collections`,
+            {},
+            { name },
+            {},
+            config
           );
-
-          switch (res.status) {
-            case 200: {
-              return res.data;
-            }
-            case 401: {
-              throw new Error("The request authorization failed");
-            }
-            case 500: {
-              throw new Error("Internal Server Error");
-            }
-          }
         },
       },
       collection: (collectionId: string) => {
         return {
-          info: async () => {
-            const res = await axios.get<Collection>(
-              `${this._endpoint}/library/${libraryId}/collections/${collectionId}`,
+          info: async (
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
+          ) => {
+            return await this.makeRequest<Collection>(
+              "GET",
+              `/library/${libraryId}/collections/${collectionId}`,
+              {},
+              undefined,
               {
-                headers: {
-                  AccessKey: this._accessKey,
-                },
-              }
+                404: "The requested collection was not found",
+              },
+              config
             );
-
-            switch (res.status) {
-              case 200: {
-                return res.data;
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested collection was not found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
           },
-          update: async (body: EditableVideo) => {
-            const res = await axios.post<Status>(
-              `${this._endpoint}/library/${libraryId}/collections/${collectionId}`,
+          update: async (
+            body: EditableVideo,
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
+          ) => {
+            return await this.makeRequest<Status>(
+              "POST",
+              `/library/${libraryId}/collections/${collectionId}`,
+              {},
               body,
               {
-                headers: {
-                  AccessKey: this._accessKey,
-                  "Content-Type": "application/json",
-                },
-              }
+                404: "The requested collection was not found",
+              },
+              config
             );
-
-            switch (res.status) {
-              case 200: {
-                if (res.data.success) {
-                  return res.data;
-                } else {
-                  throw new Error(res.data.message ?? "Unknown Error Occurred");
-                }
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested collection was not found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
           },
-          delete: async () => {
-            const res = await axios.delete<Status>(
-              `${this._endpoint}/library/${libraryId}/collections/${collectionId}`,
+          delete: async (
+            /** Axios config */
+            config?: axios.AxiosRequestConfig<Statistics>
+          ) => {
+            return await this.makeRequest<Status>(
+              "DELETE",
+              `/library/${libraryId}/collections/${collectionId}`,
+              {},
+              undefined,
               {
-                headers: {
-                  AccessKey: this._accessKey,
-                },
-              }
+                404: "The requested collection was not found",
+              },
+              config
             );
-
-            switch (res.status) {
-              case 200: {
-                if (res.data.success) {
-                  return res.data;
-                } else {
-                  throw new Error(res.data.message ?? "Unknown Error Occurred");
-                }
-              }
-              case 401: {
-                throw new Error("The request authorization failed");
-              }
-              case 404: {
-                throw new Error("The requested collection was not found");
-              }
-              case 500: {
-                throw new Error("Internal Server Error");
-              }
-            }
           },
         };
       },
