@@ -26,6 +26,21 @@ class BunnyStream {
         //   this.library(0).video("").upload;
         // }
         this._endpoint = "https://video.bunnycdn.com";
+        this.makeRequest = (method, path, query, body, errorMessages, config) => __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            const res = yield (0, axios_1.default)(`${this._endpoint}${path}`, Object.assign({ headers: {
+                    AccessKey: this._accessKey,
+                }, method, params: query, data: body }, config));
+            if (res.status >= 200 && res.status < 300) {
+                if (res.data.success === false) {
+                    throw new Error((_a = res.data.message) !== null && _a !== void 0 ? _a : "Unknown Error Occurred");
+                }
+                return res.data;
+            }
+            else {
+                throw new Error((_b = errorMessages[res.status]) !== null && _b !== void 0 ? _b : res.statusText);
+            }
+        });
         this.library = (libraryId) => {
             return {
                 statistics: (
@@ -48,24 +63,18 @@ class BunnyStream {
                  */
                 dateTo, 
                 /** If true, the statistics data will be returned in hourly groupping */
-                hourly) => __awaiter(this, void 0, void 0, function* () {
+                hourly, 
+                /** Axios config */
+                config) => __awaiter(this, void 0, void 0, function* () {
                     const dateFromEpoch = typeof dateFrom === "number" ? dateFrom : dateFrom.getDate() / 1000;
                     const dateToEpoch = typeof dateTo === "number" ? dateTo : dateTo.getDate() / 1000;
-                    const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/statistics?dateFrom=${encodeURIComponent(dateFromEpoch)}&dateTo=${encodeURIComponent(dateToEpoch)}&hourly=${encodeURIComponent(hourly)}`);
-                    switch (res.status) {
-                        case 200: {
-                            return res.data;
-                        }
-                        case 401: {
-                            throw new Error("The request authorization failed");
-                        }
-                        case 404: {
-                            throw new Error("The requested video was not found");
-                        }
-                        case 500: {
-                            throw new Error("Internal Server Error");
-                        }
-                    }
+                    return yield this.makeRequest("GET", `/library/${libraryId}/statistics`, {
+                        dateFrom: dateFromEpoch,
+                        dateTo: dateToEpoch,
+                        hourly,
+                    }, undefined, {
+                        404: "The requested video was not found",
+                    }, config);
                 }),
                 videos: {
                     list: (
@@ -74,23 +83,16 @@ class BunnyStream {
                     /** @default 100 */
                     itemsPerPage, search, collection, 
                     /** @default "date" */
-                    orderBy) => __awaiter(this, void 0, void 0, function* () {
-                        const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/videos${page !== undefined ? `?page=${encodeURIComponent(page)}` : ""}${collection !== undefined ? `&collection=${encodeURIComponent(collection)}` : ""}${itemsPerPage !== undefined ? `&itemsPerPage=${encodeURIComponent(itemsPerPage)}` : ""}${search !== undefined ? `&search=${encodeURIComponent(search)}` : ""}${orderBy !== undefined ? `&orderBy=${encodeURIComponent(orderBy)}` : ""}`, {
-                            headers: {
-                                AccessKey: this._accessKey,
-                            },
-                        });
-                        switch (res.status) {
-                            case 200: {
-                                return res.data;
-                            }
-                            case 401: {
-                                throw new Error("The request authorization failed");
-                            }
-                            case 500: {
-                                throw new Error("Internal Server Error");
-                            }
-                        }
+                    orderBy, 
+                    /** Axios config */
+                    config) => __awaiter(this, void 0, void 0, function* () {
+                        return yield this.makeRequest("GET", `/library/${libraryId}/videos`, {
+                            page,
+                            collection,
+                            itemsPerPage,
+                            search,
+                            orderBy,
+                        }, undefined, {}, config);
                     }),
                     fetch: (
                     /** The URL where the video will be fetched */
@@ -98,110 +100,41 @@ class BunnyStream {
                     /** The headers that will be sent together with the fetch request */
                     headers, collectionId, 
                     /** Video time in ms to extract the main video thumbnail */
-                    thumbnailTime, body) => __awaiter(this, void 0, void 0, function* () {
-                        const res = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/videos/fetch?collectionId=${encodeURIComponent(collectionId)}&thumbnailTime=${encodeURIComponent(thumbnailTime)}`, Object.assign({ url,
+                    thumbnailTime, body, 
+                    /** Axios config */
+                    config) => __awaiter(this, void 0, void 0, function* () {
+                        return yield this.makeRequest("POST", `/library/${libraryId}/videos/fetch`, {
+                            collectionId,
+                            thumbnailTime,
+                        }, Object.assign({ url,
                             headers }, body), {
-                            headers: {
-                                "Content-Type": "application/json",
-                                AccessKey: this._accessKey,
-                            },
-                        });
-                        switch (res.status) {
-                            case 200: {
-                                return res.data;
-                            }
-                            case 400: {
-                                throw new Error("Failed fetching the video");
-                            }
-                            case 401: {
-                                throw new Error("The request authorization failed");
-                            }
-                            case 404: {
-                                throw new Error("The requested video was not found");
-                            }
-                            case 500: {
-                                throw new Error("Internal Server Error");
-                            }
-                        }
+                            400: "Failed fetching the video",
+                            404: "The requested video was not found",
+                        }, config);
                     }),
                 },
                 video: (videoId) => {
                     return {
-                        info: () => __awaiter(this, void 0, void 0, function* () {
-                            const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/videos/${videoId}`, {
-                                headers: {
-                                    AccessKey: this._accessKey,
-                                },
-                            });
-                            switch (res.status) {
-                                case 200: {
-                                    return res.data;
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested video was not found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                        info: (
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
+                            return yield this.makeRequest("GET", `/library/${libraryId}/videos/${videoId}`, {}, undefined, {
+                                404: "The requested video was not found",
+                            }, config);
                         }),
-                        update: (body) => __awaiter(this, void 0, void 0, function* () {
-                            var _a;
-                            const res = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/videos/${videoId}`, body, {
-                                headers: {
-                                    "Content-Type": "application/json",
-                                    AccessKey: this._accessKey,
-                                },
-                            });
-                            switch (res.status) {
-                                case 200: {
-                                    if (res.data.success) {
-                                        return res.data;
-                                    }
-                                    else {
-                                        throw new Error((_a = res.data.message) !== null && _a !== void 0 ? _a : "Unknown Error Occurred");
-                                    }
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested video was not found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                        update: (body, 
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
+                            return yield this.makeRequest("POST", `/library/${libraryId}/videos/${videoId}`, {}, body, {
+                                404: "The requested video was not found",
+                            }, config);
                         }),
-                        delete: () => __awaiter(this, void 0, void 0, function* () {
-                            var _b;
-                            const res = yield axios_1.default.delete(`${this._endpoint}/library/${libraryId}/videos/${videoId}`, {
-                                headers: {
-                                    AccessKey: this._accessKey,
-                                },
-                            });
-                            switch (res.status) {
-                                case 200: {
-                                    if (res.data.success) {
-                                        return res.data;
-                                    }
-                                    else {
-                                        throw new Error((_b = res.data.message) !== null && _b !== void 0 ? _b : "Unknown Error Occurred");
-                                    }
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested video was not found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                        delete: (
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
+                            return yield this.makeRequest("DELETE", `/library/${libraryId}/videos/${videoId}`, {}, undefined, {
+                                404: "The requested video was not found",
+                            }, config);
                         }),
                         upload: ({ video, title, collectionId, thumbnailTime, videoMimeTypeOverride, expirationTimeOverride, createBody, uploadBody, onCreatedVideo, }) => __awaiter(this, void 0, void 0, function* () {
                             throw new Error("Not implemented");
@@ -240,26 +173,12 @@ class BunnyStream {
                             // hash.update(libraryId + this._accessKey + expirationTime + videoId);
                             // // if this ever does get implemented, this function will create the video (https://docs.bunny.net/reference/video_createvideo), then upload the video (https://docs.bunny.net/reference/video_uploadvideo)
                         }),
-                        heatmap: () => __awaiter(this, void 0, void 0, function* () {
-                            const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/videos/${videoId}/heatmap`, {
-                                headers: {
-                                    AccessKey: this._accessKey,
-                                },
-                            });
-                            switch (res.status) {
-                                case 200: {
-                                    return res.data;
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested video was not found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                        heatmap: (
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
+                            return yield this.makeRequest("GET", `/library/${libraryId}/videos/${videoId}/heatmap`, {}, undefined, {
+                                404: "The requested video was not found",
+                            }, config);
                         }),
                         statistics: (
                         /**
@@ -281,66 +200,35 @@ class BunnyStream {
                          */
                         dateTo, 
                         /** If true, the statistics data will be returned in hourly groupping */
-                        hourly) => __awaiter(this, void 0, void 0, function* () {
+                        hourly, 
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
                             const dateFromEpoch = typeof dateFrom === "number" ? dateFrom : dateFrom.getDate() / 1000;
                             const dateToEpoch = typeof dateTo === "number" ? dateTo : dateTo.getDate() / 1000;
-                            const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/statistics?dateFrom=${encodeURIComponent(dateFromEpoch)}&dateTo=${encodeURIComponent(dateToEpoch)}&hourly=${encodeURIComponent(hourly)}&videoGuid=${encodeURIComponent(videoId)}`);
-                            switch (res.status) {
-                                case 200: {
-                                    return res.data;
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested video was not found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                            return yield this.makeRequest("GET", `/library/${libraryId}/statistics`, {
+                                dateFrom: dateFromEpoch,
+                                dateTo: dateToEpoch,
+                                hourly,
+                                videoGuid: videoId,
+                            }, undefined, {
+                                404: "The requested video was not found",
+                            }, config);
                         }),
-                        reencode: () => __awaiter(this, void 0, void 0, function* () {
-                            const res = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/videos/${videoId}/reencode`, {
-                                headers: {
-                                    AccessKey: this._accessKey,
-                                },
-                            });
-                            switch (res.status) {
-                                case 200: {
-                                    return res.data;
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested video was not found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                        reencode: (
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
+                            return this.makeRequest("POST", `/library/${libraryId}/videos/${videoId}/reencode`, {}, {}, {
+                                404: "The requested video was not found",
+                            }, config);
                         }),
-                        setThumbnail: (thumbnailUrl) => __awaiter(this, void 0, void 0, function* () {
-                            const res = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/videos/${videoId}/thumbnail?thumbnailUrl=${encodeURIComponent(thumbnailUrl)}`, {
-                                headers: {
-                                    AccessKey: this._accessKey,
-                                },
-                            });
-                            switch (res.status) {
-                                case 200: {
-                                    return res.data;
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested video could not be found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                        setThumbnail: (thumbnailUrl, 
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
+                            return yield this.makeRequest("POST", `/library/${libraryId}/videos/${videoId}/thumbnail`, {
+                                thumbnailUrl,
+                            }, {}, {
+                                404: "The requested video could not be found",
+                            }, config);
                         }),
                         caption: (srclang) => {
                             return {
@@ -348,54 +236,23 @@ class BunnyStream {
                                 /** The text description label for the caption */
                                 label, 
                                 /** Base64 encoded captions file */
-                                captionsFile, body) => __awaiter(this, void 0, void 0, function* () {
-                                    const res = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/videos/${videoId}/captions/${srclang}`, Object.assign({ srclang, label, captionsFile }, body), {
-                                        headers: {
-                                            "Content-Type": "application/json",
-                                            AccessKey: this._accessKey,
-                                        },
-                                    });
-                                    switch (res.status) {
-                                        case 200: {
-                                            return res.data;
-                                        }
-                                        case 400: {
-                                            throw new Error("Failed uploading the captions");
-                                        }
-                                        case 401: {
-                                            throw new Error("The request authorization failed");
-                                        }
-                                        case 404: {
-                                            throw new Error("The requested video was not found");
-                                        }
-                                        case 500: {
-                                            throw new Error("Internal Server Error");
-                                        }
-                                    }
+                                captionsFile, body, 
+                                /** Axios config */
+                                config) => __awaiter(this, void 0, void 0, function* () {
+                                    return yield this.makeRequest("POST", `/library/${libraryId}/videos/${videoId}/captions/${srclang}`, {}, Object.assign({ srclang,
+                                        label,
+                                        captionsFile }, body), {
+                                        400: "Failed uploading the captions",
+                                        404: "The requested video was not found",
+                                    }, config);
                                 }),
-                                delete: () => __awaiter(this, void 0, void 0, function* () {
-                                    const res = yield axios_1.default.delete(`${this._endpoint}/library/${libraryId}/videos/${videoId}/captions/${srclang}`, {
-                                        headers: {
-                                            AccessKey: this._accessKey,
-                                        },
-                                    });
-                                    switch (res.status) {
-                                        case 200: {
-                                            return res.data;
-                                        }
-                                        case 400: {
-                                            throw new Error("Failed deleting the captions");
-                                        }
-                                        case 401: {
-                                            throw new Error("The request authorization failed");
-                                        }
-                                        case 404: {
-                                            throw new Error("The requested video or captions were not found");
-                                        }
-                                        case 500: {
-                                            throw new Error("Internal Server Error");
-                                        }
-                                    }
+                                delete: (
+                                /** Axios config */
+                                config) => __awaiter(this, void 0, void 0, function* () {
+                                    return yield this.makeRequest("DELETE", `/library/${libraryId}/videos/${videoId}/captions/${srclang}`, {}, undefined, {
+                                        400: "Failed deleting the captions",
+                                        404: "The requested video or captions were not found",
+                                    }, config);
                                 }),
                             };
                         },
@@ -408,125 +265,46 @@ class BunnyStream {
                     /** @default 100 */
                     itemsPerPage, search, 
                     /** @default "date" */
-                    orderBy) => __awaiter(this, void 0, void 0, function* () {
-                        const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/collections?page=${encodeURIComponent(page)}&itemsPerPage=${encodeURIComponent(itemsPerPage)}&search=${encodeURIComponent(search)}&orderBy=${encodeURIComponent(orderBy)}`, {
-                            headers: {
-                                AccessKey: this._accessKey,
-                            },
-                        });
-                        switch (res.status) {
-                            case 200: {
-                                return res.data;
-                            }
-                            case 401: {
-                                throw new Error("The request authorization failed");
-                            }
-                            case 500: {
-                                throw new Error("Internal Server Error");
-                            }
-                        }
+                    orderBy, 
+                    /** Axios config */
+                    config) => __awaiter(this, void 0, void 0, function* () {
+                        return yield this.makeRequest("GET", `/library/${libraryId}/collections`, {
+                            page,
+                            itemsPerPage,
+                            search,
+                            orderBy,
+                        }, undefined, {}, config);
                     }),
                     create: (
                     /** The name of the collection */
-                    name) => __awaiter(this, void 0, void 0, function* () {
-                        const res = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/collections`, {
-                            name,
-                        }, {
-                            headers: {
-                                "Content-Type": "application/json",
-                                AccessKey: this._accessKey,
-                            },
-                        });
-                        switch (res.status) {
-                            case 200: {
-                                return res.data;
-                            }
-                            case 401: {
-                                throw new Error("The request authorization failed");
-                            }
-                            case 500: {
-                                throw new Error("Internal Server Error");
-                            }
-                        }
+                    name, 
+                    /** Axios config */
+                    config) => __awaiter(this, void 0, void 0, function* () {
+                        return yield this.makeRequest("POST", `/library/${libraryId}/collections`, {}, { name }, {}, config);
                     }),
                 },
                 collection: (collectionId) => {
                     return {
-                        info: () => __awaiter(this, void 0, void 0, function* () {
-                            const res = yield axios_1.default.get(`${this._endpoint}/library/${libraryId}/collections/${collectionId}`, {
-                                headers: {
-                                    AccessKey: this._accessKey,
-                                },
-                            });
-                            switch (res.status) {
-                                case 200: {
-                                    return res.data;
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested collection was not found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                        info: (
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
+                            return yield this.makeRequest("GET", `/library/${libraryId}/collections/${collectionId}`, {}, undefined, {
+                                404: "The requested collection was not found",
+                            }, config);
                         }),
-                        update: (body) => __awaiter(this, void 0, void 0, function* () {
-                            var _a;
-                            const res = yield axios_1.default.post(`${this._endpoint}/library/${libraryId}/collections/${collectionId}`, body, {
-                                headers: {
-                                    AccessKey: this._accessKey,
-                                    "Content-Type": "application/json",
-                                },
-                            });
-                            switch (res.status) {
-                                case 200: {
-                                    if (res.data.success) {
-                                        return res.data;
-                                    }
-                                    else {
-                                        throw new Error((_a = res.data.message) !== null && _a !== void 0 ? _a : "Unknown Error Occurred");
-                                    }
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested collection was not found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                        update: (body, 
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
+                            return yield this.makeRequest("POST", `/library/${libraryId}/collections/${collectionId}`, {}, body, {
+                                404: "The requested collection was not found",
+                            }, config);
                         }),
-                        delete: () => __awaiter(this, void 0, void 0, function* () {
-                            var _b;
-                            const res = yield axios_1.default.delete(`${this._endpoint}/library/${libraryId}/collections/${collectionId}`, {
-                                headers: {
-                                    AccessKey: this._accessKey,
-                                },
-                            });
-                            switch (res.status) {
-                                case 200: {
-                                    if (res.data.success) {
-                                        return res.data;
-                                    }
-                                    else {
-                                        throw new Error((_b = res.data.message) !== null && _b !== void 0 ? _b : "Unknown Error Occurred");
-                                    }
-                                }
-                                case 401: {
-                                    throw new Error("The request authorization failed");
-                                }
-                                case 404: {
-                                    throw new Error("The requested collection was not found");
-                                }
-                                case 500: {
-                                    throw new Error("Internal Server Error");
-                                }
-                            }
+                        delete: (
+                        /** Axios config */
+                        config) => __awaiter(this, void 0, void 0, function* () {
+                            return yield this.makeRequest("DELETE", `/library/${libraryId}/collections/${collectionId}`, {}, undefined, {
+                                404: "The requested collection was not found",
+                            }, config);
                         }),
                     };
                 },

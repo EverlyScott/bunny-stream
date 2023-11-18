@@ -1,4 +1,5 @@
 /// <reference types="node" />
+import axios from "axios";
 import { PathLike } from "fs";
 export interface PagedList<T> {
     /** The total number of items that can be returned */
@@ -174,6 +175,15 @@ export interface UploadParams {
     uploadBody?: Body;
     onCreatedVideo?: (data: Video) => any;
 }
+export type HTTPMethod = "GET" | "HEAD" | "POST" | "PUT" | "DELETE" | "CONNECT" | "OPTIONS" | "TRACE" | "PATCH";
+export type HTTPMethodsWithBody = "POST" | "PUT" | "PATCH";
+export interface RequestQuery {
+    [key: string]: any;
+}
+export type HTTPErrorCodes = 100 | 101 | 102 | 103 | 200 | 201 | 202 | 203 | 204 | 205 | 206 | 207 | 208 | 226 | 300 | 301 | 302 | 303 | 304 | 305 | 306 | 307 | 308 | 400 | 401 | 402 | 403 | 404 | 405 | 406 | 407 | 408 | 409 | 410 | 411 | 412 | 413 | 414 | 415 | 416 | 147 | 418 | 421 | 422 | 423 | 424 | 425 | 426 | 428 | 429 | 431 | 451 | 500 | 501 | 502 | 503 | 504 | 505 | 506 | 507 | 508 | 510 | 511;
+export type HTTPErrorMessages = {
+    [K in HTTPErrorCodes]?: string;
+};
 export default class BunnyStream {
     /**
      * The API requests are authenticated using the **AccessKey** header. You can find it in your Video Library details page in the bunny.net dashboard.
@@ -189,40 +199,41 @@ export default class BunnyStream {
      */
     _accessKey: string);
     private _endpoint;
+    makeRequest: <R = any, B = any, M extends HTTPMethod = HTTPMethod>(method: M, path: string, query?: RequestQuery, body?: M extends HTTPMethodsWithBody ? B : undefined, errorMessages?: HTTPErrorMessages, config?: axios.AxiosRequestConfig<B>) => Promise<R>;
     library: (libraryId: number) => {
-        statistics: (dateFrom?: Date | number, dateTo?: Date | number, hourly?: boolean) => Promise<Statistics>;
+        statistics: (dateFrom?: Date | number, dateTo?: Date | number, hourly?: boolean, config?: axios.AxiosRequestConfig<Statistics>) => Promise<"GET">;
         videos: {
-            list: (page?: number, itemsPerPage?: number, search?: string, collection?: string, orderBy?: "date" | "title" | (string & {})) => Promise<PagedList<Video>>;
+            list: (page?: number, itemsPerPage?: number, search?: string, collection?: string, orderBy?: "date" | "title" | (string & {}), config?: axios.AxiosRequestConfig<PagedList<Video>>) => Promise<PagedList<Video>>;
             fetch: (url: string, headers?: {
                 [key: string]: string;
             }, collectionId?: string, thumbnailTime?: number, body?: {
                 [key: string]: any;
-            }) => Promise<Status>;
+            }, config?: axios.AxiosRequestConfig<Statistics>) => Promise<Status>;
         };
         video: (videoId: string) => {
-            info: () => Promise<Video>;
-            update: (body: EditableVideo) => Promise<Status>;
-            delete: () => Promise<Status>;
+            info: (config?: axios.AxiosRequestConfig<Statistics>) => Promise<Video>;
+            update: (body: EditableVideo, config?: axios.AxiosRequestConfig<Statistics>) => Promise<Status>;
+            delete: (config?: axios.AxiosRequestConfig<Statistics>) => Promise<Status>;
             upload: ({ video, title, collectionId, thumbnailTime, videoMimeTypeOverride, expirationTimeOverride, createBody, uploadBody, onCreatedVideo, }: UploadParams) => Promise<never>;
-            heatmap: () => Promise<Heatmap>;
-            statistics: (dateFrom?: Date | number, dateTo?: Date | number, hourly?: boolean) => Promise<Statistics>;
-            reencode: () => Promise<Video>;
-            setThumbnail: (thumbnailUrl: string) => Promise<Status>;
+            heatmap: (config?: axios.AxiosRequestConfig<Statistics>) => Promise<Heatmap>;
+            statistics: (dateFrom?: Date | number, dateTo?: Date | number, hourly?: boolean, config?: axios.AxiosRequestConfig<Statistics>) => Promise<Statistics>;
+            reencode: (config?: axios.AxiosRequestConfig<Statistics>) => Promise<Video>;
+            setThumbnail: (thumbnailUrl: string, config?: axios.AxiosRequestConfig<Statistics>) => Promise<Status>;
             caption: (srclang: string) => {
                 add: (label?: string, captionsFile?: string, body?: {
                     [key: string]: any;
-                }) => Promise<Status>;
-                delete: () => Promise<Status>;
+                }, config?: axios.AxiosRequestConfig<Statistics>) => Promise<Status>;
+                delete: (config?: axios.AxiosRequestConfig<Statistics>) => Promise<Status>;
             };
         };
         collections: {
-            list: (page?: number, itemsPerPage?: number, search?: string, orderBy?: "date" | (string & {})) => Promise<PagedList<Collection>>;
-            create: (name: string) => Promise<Collection>;
+            list: (page?: number, itemsPerPage?: number, search?: string, orderBy?: "date" | (string & {}), config?: axios.AxiosRequestConfig<Statistics>) => Promise<PagedList<Collection>>;
+            create: (name: string, config?: axios.AxiosRequestConfig<Statistics>) => Promise<Collection>;
         };
         collection: (collectionId: string) => {
-            info: () => Promise<Collection>;
-            update: (body: EditableVideo) => Promise<Status>;
-            delete: () => Promise<Status>;
+            info: (config?: axios.AxiosRequestConfig<Statistics>) => Promise<Collection>;
+            update: (body: EditableVideo, config?: axios.AxiosRequestConfig<Statistics>) => Promise<Status>;
+            delete: (config?: axios.AxiosRequestConfig<Statistics>) => Promise<Status>;
         };
     };
 }
